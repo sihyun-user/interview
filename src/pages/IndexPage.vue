@@ -1,17 +1,22 @@
 <template>
   <q-page class="row q-pt-xl">
     <div class="full-width q-px-xl">
-      <div class="q-mb-xl">
+      <q-form @submit="addEntryFormSubmit" class="q-mb-xl">
         <q-input v-model="tempData.name" label="姓名" />
-        <q-input v-model="tempData.age" label="年齡" />
-        <q-btn color="primary" class="q-mt-md">新增</q-btn>
-      </div>
+        <q-input
+          type="number"
+          step="1"
+          v-model.number="tempData.age"
+          label="年齡"
+        />
+        <q-btn type="submit" color="primary" class="q-mt-md">新增</q-btn>
+      </q-form>
 
       <q-table
         flat
         bordered
         ref="tableRef"
-        :rows="blockData"
+        :rows="storeEntries.entries"
         :columns="(tableConfig as QTableProps['columns'])"
         row-key="id"
         hide-pagination
@@ -78,20 +83,22 @@
 </template>
 
 <script setup lang="ts">
-import axios from 'axios';
 import { QTableProps } from 'quasar';
-import { ref } from 'vue';
+import { ref, reactive } from 'vue';
+import { useStoreEntries } from 'src/stores/storeEntries';
+
+interface Entry {
+  id: string;
+  name: string;
+  age: number;
+}
+
 interface btnType {
   label: string;
   icon: string;
   status: string;
 }
-const blockData = ref([
-  {
-    name: 'test',
-    age: 25,
-  },
-]);
+
 const tableConfig = ref([
   {
     label: '姓名',
@@ -119,13 +126,52 @@ const tableButtons = ref([
   },
 ]);
 
-const tempData = ref({
+const tempDataDefault = reactive({
   name: '',
   age: '',
 });
-function handleClickOption(btn, data) {
-  // ...
-}
+
+const tempData = reactive({
+  ...tempDataDefault,
+});
+
+/*
+  store
+*/
+const storeEntries = useStoreEntries();
+
+storeEntries.getEntry();
+
+/*
+  handle entry
+*/
+const addEntryReset = () => {
+  Object.assign(tempData, tempDataDefault);
+};
+
+const addEntryFormSubmit = async () => {
+  if (!tempData.name || !tempData.age) {
+    return alert('請輸入姓名與年齡');
+  }
+
+  const entry = {
+    name: tempData.name,
+    age: parseInt(tempData.age),
+  };
+
+  await storeEntries.addEntry(entry);
+  await storeEntries.getEntry();
+  addEntryReset();
+};
+
+const handleClickOption = async (btn: btnType, data: Entry) => {
+  if (btn.status === 'edit') {
+    // await storeEntries.updateEntry(data);
+  } else if (btn.status === 'delete') {
+    await storeEntries.deleteEntry(data.id);
+  }
+  storeEntries.getEntry();
+};
 </script>
 
 <style lang="scss" scoped>
